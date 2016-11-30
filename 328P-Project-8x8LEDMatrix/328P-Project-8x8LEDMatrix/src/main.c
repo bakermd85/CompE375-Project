@@ -1,7 +1,6 @@
 #define F_CPU 16000000UL // 16 MHz clock speed
 
 #include <avr/io.h>
-#include <util/delay.h>  //header to enable delay function in program
 #include <avr/interrupt.h> //header to enable interrupt function in program
 
 static int numeralArray[10][8]= {
@@ -17,17 +16,24 @@ static int numeralArray[10][8]= {
 	{0b01111110,0b11111111,0b11000011,0b11111111,0b11111110,0b11000000,0b11000000,0b11000000}}; //9
 			
 char digitArray[] = {0,1,2,3,4,5,6,7,8,9};
+	
 volatile uint8_t pb7Flag = 0;
+volatile uint8_t countDown = 60;
+volatile uint8_t msDelay = 0;
+volatile uint8_t a = 0;
+
 uint8_t displayDigit = 0;
 
 void display_waiting(void);
 void display_numerals(void);
-void generateTimer2(void);
+void generateTimer(void);
+void generateTimer0(void);
 
 int main(void)
 {
+	int x;
+	
 	DDRD = 0xFF;//PORTB,C,D are set as output
-	//DDRB = 0xFF;
 	DDRB = 0b01111111;
 	DDRC = 0xFF;
 
@@ -38,11 +44,25 @@ int main(void)
 	
 	sei();
 	
+	generateTimer();
+	generateTimer0();
+	
 	while(1)
 	{
-		if(pb7Flag > 0 )
+		if(pb7Flag > 0)
 		{
-			_delay_ms(70);
+			
+			//100 ms delay
+			while(x < 100)
+			{
+				if(msDelay == 1 )
+				{
+					x++;
+					msDelay = 0;
+				}
+			}
+			
+			x = 0;	
 			
 			if(displayDigit == 9)
 			{
@@ -53,13 +73,13 @@ int main(void)
 				displayDigit ++;
 			}
 			
-			pb7Flag = 0;
+			pb7Flag = 0;			
+		
 		}
 		//display_waiting();
 		display_numerals();
 		
 	}
-	
 }
 
 /***************************************************************************************
@@ -71,11 +91,25 @@ int main(void)
 
 ISR(PCINT0_vect)
 {
+	
 	if(!(PINB & (1<<7)))
 	{
 		pb7Flag ++;
 	}
+
 }
+
+ISR(TIMER0_COMPA_vect)
+{
+	msDelay = 1;	
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+	//delay3ms = 1;	
+
+}
+
 
 /****************************************************************************************
 
@@ -86,6 +120,8 @@ ISR(PCINT0_vect)
 
 void display_numerals(void)
 {
+	
+	int x;
 	
 	PORTB = 0x00;
 	PORTC = 0x00;
@@ -107,16 +143,29 @@ void display_numerals(void)
 				PORTB = 0b10000000;
 			}
 			
-			_delay_ms(1.2);
+		   //1 ms delay
+			while(x < 1)
+			{
+				if(msDelay == 1 )
+				{
+					x++;
+					msDelay = 0;
+				}
+			}
+			
+			x = 0;	
 			
 			PORTB = 0b10000000;
 			PORTC = 0x00;
+			
 		}
 	}
 }
 
 void display_waiting(void)
 {
+	int x = 0;
+	
 	for(int n=0; n < 8; n++)
 	{
 		if(n <4)
@@ -133,15 +182,37 @@ void display_waiting(void)
 		for(int i = 0; i < 8; i++ )
 		{
 			PORTD = (0xFF) & (~(1<<i));
-			_delay_ms(100);			
+			
+			//100 ms delay
+			while(x < 100)
+			{
+				if(msDelay == 1 )
+				{
+					x++;
+					msDelay = 0;
+				}
+			}
+			
+			x = 0;			
 		}
 	}
 }
 
-void generateTimer2(void)
-{
+void generateTimer(void)
+{ 
 	TCCR1A |= (1<<WGM12); //Set to CTC Mode
 	TCCR1B |= (1<<CS12) | (1<<CS10);
 	TIMSK1 |= (1<<OCIE1A);
 	OCR1A = 23437;
+}
+
+void generateTimer0(void)
+{ 
+	ADCSRB |= (1<<ADTS0) | (1<<ADTS1); //Set Timer/Counter 0 Compare Match A
+	
+	TCCR0B |= (1<<CS00) | (1<<CS02); //Set prescaler to 1024
+	TCCR0A |= (1<<WGM01);  //Set to CTC Mode
+	TIMSK0 |= (1<<OCIE0A); //Compare Match A interrupt enabled
+	
+	OCR0A = 8;
 }
