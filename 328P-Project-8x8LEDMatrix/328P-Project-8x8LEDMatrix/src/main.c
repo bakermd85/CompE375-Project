@@ -18,8 +18,9 @@ static int numeralArray[10][8]= {
 char digitArray[] = {0,1,2,3,4,5,6,7,8,9};
 	
 volatile uint8_t pb7Flag = 0;
-volatile uint8_t countDown = 60;
+volatile uint8_t countDown = 10;
 volatile uint8_t msDelay = 0;
+volatile uint8_t secDelay = 0;
 volatile uint8_t a = 0;
 
 uint8_t displayDigit = 0;
@@ -49,11 +50,12 @@ int main(void)
 	
 	while(1)
 	{
-		if(pb7Flag > 0)
+		if(pb7Flag == 1)
 		{
+			countDown = 10;
 			
-			//100 ms delay
-			while(x < 100)
+			//200 ms delay
+			while(x < 200)
 			{
 				if(msDelay == 1 )
 				{
@@ -73,12 +75,27 @@ int main(void)
 				displayDigit ++;
 			}
 			
-			pb7Flag = 0;			
-		
+			pb7Flag = 0;		
+			
+			display_numerals();	
 		}
-		//display_waiting();
-		display_numerals();
 		
+		if(secDelay == 1)
+		{
+			if(countDown == 1)
+			{				
+				countDown = 10;
+				display_waiting();
+			}
+			else
+			{
+				countDown --;
+			}
+			
+			secDelay = 0;
+		}	
+		
+		display_numerals();	
 	}
 }
 
@@ -94,7 +111,7 @@ ISR(PCINT0_vect)
 	
 	if(!(PINB & (1<<7)))
 	{
-		pb7Flag ++;
+		pb7Flag = 1;
 	}
 
 }
@@ -106,8 +123,7 @@ ISR(TIMER0_COMPA_vect)
 
 ISR(TIMER1_COMPA_vect)
 {
-	//delay3ms = 1;	
-
+	secDelay = 1;
 }
 
 
@@ -203,7 +219,7 @@ void generateTimer(void)
 	TCCR1A |= (1<<WGM12); //Set to CTC Mode
 	TCCR1B |= (1<<CS12) | (1<<CS10);
 	TIMSK1 |= (1<<OCIE1A);
-	OCR1A = 23437;
+	OCR1A = 7813;
 }
 
 void generateTimer0(void)
@@ -214,5 +230,5 @@ void generateTimer0(void)
 	TCCR0A |= (1<<WGM01);  //Set to CTC Mode
 	TIMSK0 |= (1<<OCIE0A); //Compare Match A interrupt enabled
 	
-	OCR0A = 8;
+	OCR0A = 10;
 }
