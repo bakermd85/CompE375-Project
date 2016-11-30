@@ -1,38 +1,8 @@
-/**
- * \file
- *
- * \brief Empty user application template
- *
- */
-
-/**
- * \mainpage User Application template doxygen documentation
- *
- * \par Empty user application template
- *
- * Bare minimum empty user application template
- *
- * \par Content
- *
- * -# Include the ASF header files (through asf.h)
- * -# "Insert system clock initialization code here" comment
- * -# Minimal main function that starts with a call to board_init()
- * -# "Insert application code here" comment
- *
- */
-
-/*
- * Include header files for all drivers that have been imported from
- * Atmel Software Framework (ASF).
- */
-/*
- * Support and FAQ: visit <a href="http://www.atmel.com/design-support/">Atmel Support</a>
- */
-
 #define F_CPU 16000000UL // 16 MHz clock speed
 
 #include <avr/io.h>
 #include <util/delay.h>  //header to enable delay function in program
+#include <avr/interrupt.h> //header to enable interrupt function in program
 
 static int numeralArray[10][8]= {
 	{0b00111100,0b01100110,0b11000011,0b11000011,0b11000011,0b11000011,0b01100110,0b00111100}, //0
@@ -46,8 +16,9 @@ static int numeralArray[10][8]= {
 	{0b01111110,0b11111111,0b11000011,0b11111111,0b11111111,0b11000011,0b11111111,0b01111110}, //8
 	{0b01111110,0b11111111,0b11000011,0b11111111,0b11111110,0b11000000,0b11000000,0b11000000}}; //9
 			
-char digitArray[] ={0,1,2,3,4,5,6,7,8,9};
-uint8_t l =0;
+char digitArray[] = {0,1,2,3,4,5,6,7,8,9};
+volatile uint8_t pb7Flag = 0;
+uint8_t displayDigit = 0;
 
 void display_waiting(void);
 void display_numerals(void);
@@ -55,47 +26,92 @@ void display_numerals(void);
 int main(void)
 {
 	DDRD = 0xFF;//PORTB,C,D are set as output
-	DDRB = 0xFF;
+	//DDRB = 0xFF;
+	DDRB = 0b01111111;
 	DDRC = 0xFF;
+
+	PORTB |= (1 << PORTB7);  //set pull up	
+	
+	PCICR |= (1 << PCIE0);  // enable PCMSK0 scan
+	PCMSK0 |= (1 << PCINT0); //PCINT0 will trigger on state change
+	
+	sei();
 	
 	while(1)
 	{
+		if(pb7Flag > 0 )
+		{
+			_delay_ms(70);
+			
+			if(displayDigit == 9)
+			{
+				displayDigit = 0;		
+			}
+			else
+			{
+				displayDigit ++;
+			}
+			
+			pb7Flag = 0;
+		}
 		//display_waiting();
 		display_numerals();
+		
+	}
+	
+}
+
+/***************************************************************************************
+
+                                          ISRs
+									  
+***************************************************************************************/
+
+
+ISR(PCINT0_vect)
+{
+	if(!(PINB & (1<<7)))
+	{
+		pb7Flag ++;
 	}
 }
 
+/****************************************************************************************
+
+                                       Functions
+
+****************************************************************************************/
+
+
 void display_numerals(void)
 {
-	for(int i=0; i<sizeof digitArray; i++)
+	
+	PORTB = 0x00;
+	PORTC = 0x00;
+	
+	for(int j=0; j<50; j++)
 	{
-		l = digitArray[i];
-		
-		for(int j=0; j<50; j++)
+		for(int k=0; k<8;k++)
 		{
-			for(int k=0; k<8;k++)
+			if(k<4)
 			{
-				if(k<4)
-				{
-					PORTB = ((0x00) | (1<<k));
-					PORTD = ~numeralArray[l][k];
-					PORTC = 0x00;
-				}
-				else
-				{
-					PORTC = ((0x00) | (1<<(k-4)));
-					PORTD = ~numeralArray[l][k];
-					PORTB = 0x00;
-				}
-				
-				_delay_ms(1.2);
-					
-				PORTB = 0x00;
+				PORTB = ((0b10000000) | (1<<k));
+				PORTD = ~numeralArray[displayDigit][k];
 				PORTC = 0x00;
 			}
+			else
+			{
+				PORTC = ((0x00) | (1<<(k-4)));
+				PORTD = ~numeralArray[displayDigit][k];
+				PORTB = 0b10000000;
+			}
+			
+			_delay_ms(1.2);
+			
+			PORTB = 0b10000000;
+			PORTC = 0x00;
 		}
-	}		
-	
+	}
 }
 
 void display_waiting(void)
@@ -104,13 +120,12 @@ void display_waiting(void)
 	{
 		if(n <4)
 		{
-			PORTB = ((0x00) | (1<<n));
+			PORTB = ((0b10000000) | (1<<n));
 			PORTC = 0x00;
-			
 		}
 		else
 		{
-			PORTC = ((0x00) | (1<<(n-4)));
+			PORTC = ((0b10000000) | (1<<(n-4)));
 			PORTB = 0x00;
 		}
 			
@@ -121,4 +136,3 @@ void display_waiting(void)
 		}
 	}
 }
-
