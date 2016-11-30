@@ -22,6 +22,7 @@ uint8_t displayDigit = 0;
 
 void display_waiting(void);
 void display_numerals(void);
+void generateTimer2(void);
 
 int main(void)
 {
@@ -135,4 +136,12 @@ void display_waiting(void)
 			_delay_ms(100);			
 		}
 	}
+}
+
+void generateTimer2(void)
+{
+	TCCR1A |= (1<<WGM12); //Set to CTC Mode
+	TCCR1B |= (1<<CS12) | (1<<CS10);
+	TIMSK1 |= (1<<OCIE1A);
+	OCR1A = 23437;
 }
