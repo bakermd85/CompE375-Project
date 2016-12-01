@@ -182,6 +182,8 @@ void display_waiting(void)
 {
 	int x = 0;
 	
+	displayDigit = 0;
+	
 	for(int n=0; n < 8; n++)
 	{
 		if(n <4)
