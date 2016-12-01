@@ -142,8 +142,7 @@ void display_numerals(void)
 	PORTB = 0x00;
 	PORTC = 0x00;
 	
-	for(int j=0; j<50; j++)
-	{
+
 		for(int k=0; k<8;k++)
 		{
 			if(k<4)
@@ -175,7 +174,7 @@ void display_numerals(void)
 			PORTC = 0x00;
 			
 		}
-	}
+	
 }
 
 void display_waiting(void)
