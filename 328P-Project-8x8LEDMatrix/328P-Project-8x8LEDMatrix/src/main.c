@@ -3,6 +3,11 @@
 #include <avr/io.h>
 #include <avr/interrupt.h> //header to enable interrupt function in program
 
+void display_waiting(void);
+void display_numerals(void);
+void generateTimer(void);
+void generateTimer0(void);
+
 static int numeralArray[10][8]= {
 	{0b00111100,0b01100110,0b11000011,0b11000011,0b11000011,0b11000011,0b01100110,0b00111100}, //0
 	{0b00010000,0b00011000,0b00011100,0b00011000,0b00011000,0b00011000,0b01111110,0b01111110}, //1
@@ -24,15 +29,15 @@ volatile uint8_t secDelay = 0;
 volatile uint8_t a = 0;
 
 uint8_t displayDigit = 0;
-
-void display_waiting(void);
-void display_numerals(void);
-void generateTimer(void);
-void generateTimer0(void);
+uint8_t displayRow = 0;
 
 int main(void)
 {
 	int x;
+	
+	int (*functionPtr) (void);
+	
+	functionPtr = &display_waiting;
 	
 	DDRD = 0xFF;//PORTB,C,D are set as output
 	DDRB = 0b01111111;
@@ -77,7 +82,7 @@ int main(void)
 			
 			pb7Flag = 0;		
 			
-			display_numerals();	
+			functionPtr = &display_numerals;
 		}
 		
 		if(secDelay == 1)
@@ -85,7 +90,8 @@ int main(void)
 			if(countDown == 1)
 			{				
 				countDown = 10;
-				display_waiting();
+				
+				functionPtr = &display_waiting;
 			}
 			else
 			{
@@ -94,8 +100,9 @@ int main(void)
 			
 			secDelay = 0;
 		}	
-		
-		display_numerals();	
+
+		(*functionPtr)();
+
 	}
 }
 
@@ -183,36 +190,40 @@ void display_waiting(void)
 	
 	displayDigit = 0;
 	
-	for(int n=0; n < 8; n++)
+	if(displayRow >= 8)
 	{
-		if(n <4)
-		{
-			PORTB = ((0b10000000) | (1<<n));
-			PORTC = 0x00;
-		}
-		else
-		{
-			PORTC = ((0b10000000) | (1<<(n-4)));
-			PORTB = 0x00;
-		}
-			
-		for(int i = 0; i < 8; i++ )
-		{
-			PORTD = (0xFF) & (~(1<<i));
-			
-			//100 ms delay
-			while(x < 100)
-			{
-				if(msDelay == 1 )
-				{
-					x++;
-					msDelay = 0;
-				}
-			}
-			
-			x = 0;			
-		}
+		displayRow = 0;
 	}
+
+	if(displayRow <4)
+	{
+		PORTB = ((0b10000000) | (1<<displayRow));
+		PORTC = 0x00;
+	}
+	else
+	{
+		PORTC = ((0b10000000) | (1<<(displayRow-4)));
+		PORTB = 0x00;
+	}
+			
+	for(int i = 0; i < 8; i++ )
+	{
+		PORTD = (0xFF) & (~(1<<i));
+			
+		//100 ms delay
+		while(x < 100)
+		{
+			if(msDelay == 1 )
+			{
+				x++;
+				msDelay = 0;
+			}
+		}
+			
+		x = 0;			
+	}
+	
+	displayRow ++;
 }
 
 void generateTimer(void)
